@@ -44,6 +44,7 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRela
     bool public adminLock; /* once set to true, no new admin roles can be assigned to shaman */
     bool public managerLock; /* once set to true, no new manager roles can be assigned to shaman */
     bool public governorLock; /* once set to true, no new governor roles can be assigned to shaman */
+    bool public ragequitLock; /* once set to true, only admin roles may perform ragequit */
     mapping(address => uint256) public shamans; /*maps shaman addresses to their permission level*/
     /* permissions registry for shamans
     0 = no permission
@@ -197,8 +198,9 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRela
     event SharesPaused(bool paused); /*emits when shares are paused or unpaused*/
     event LootPaused(bool paused); /*emits when loot is paused or unpaused*/
     event LockAdmin(bool adminLock); /*emits when admin is locked*/
-    event LockManager(bool managerLock); /*emits when admin is locked*/
-    event LockGovernor(bool governorLock); /*emits when admin is locked*/
+    event LockManager(bool managerLock); /*emits when manager is locked*/
+    event LockGovernor(bool governorLock); /*emits when governor is locked*/
+    event LockRagequit(bool ragequitLock); /*emits when ragequit is locked*/
 
     function encodeMultisend(bytes[] memory _calls, address _target)
         external
@@ -629,7 +631,7 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRela
         _ragequit(to, sharesToBurn, lootToBurn, tokens);
     }
 
-    /// @notice Internal execution of rage quite
+    /// @notice Internal execution of rage quit
     /// @param to Account that receives 'fair share'.
     /// @param lootToBurn Baal pure economic weight to burn.
     /// @param sharesToBurn Baal voting weight to burn.
@@ -640,6 +642,8 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRela
         uint256 lootToBurn,
         address[] memory tokens
     ) internal {
+        require(!ragequitLock, "ragequitLock");
+
         uint256 _totalSupply = totalSupply();
 
         if (lootToBurn != 0) {
@@ -738,6 +742,13 @@ contract Baal is Module, EIP712Upgradeable, ReentrancyGuardUpgradeable, BaseRela
         governorLock = true;
 
         emit LockGovernor(governorLock);
+    }
+
+    /// @notice Lock governor so setShamans cannot be called with governor changes
+    function lockRagequit() external baalOnly {
+        ragequitLock = true;
+
+        emit LockGovernor(ragequitLock);
     }
 
     // ****************
